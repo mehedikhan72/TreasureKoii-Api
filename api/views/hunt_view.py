@@ -59,19 +59,31 @@ def create_puzzle(request, hunt_id):
         "success": "Puzzle created successfully",
     }, status=status.HTTP_201_CREATED)
 
+def user_already_in_a_team(user, hunt):
+    teams = Team.objects.filter(hunt=hunt)
+    for team in teams:
+        if user in team.members.all():
+            return True
+    return False
+
 
 @api_view(['POST'])
 def create_team(request, hunt_id):
     if not request.user.is_authenticated:
         return Response(
-            {"error": "Please login to join a team"},
+            {"error": "Please login to create a team"},
+            status=status.HTTP_400_BAD_REQUEST,)
+    user = User.objects.get(id=request.user.id)
+    if user_already_in_a_team(user, Hunt.objects.get(id=hunt_id)):
+        return Response(
+            {"error": "You are already in a team for this hunt."},
             status=status.HTTP_400_BAD_REQUEST,)
 
     hunt = Hunt.objects.get(id=hunt_id)
     name = request.data.get('name')
-    leader = User.objects.get(id=request.user.id)
+    leader = user
     remaining_skips = hunt.number_of_skips_for_each_team
-    # randomly generate a joining password of 8 characters
+
     joining_password = ''.join(random.choices(
         string.ascii_uppercase + string.digits, k=8))
 
@@ -84,7 +96,8 @@ def create_team(request, hunt_id):
                                remaining_skips=remaining_skips, joining_password=joining_password)
     team.members.add(leader)
     team.save()
-
+    hunt.participants.add(user)
+    
     return Response({
         "success": "Team created successfully. Here is your joining password: " + joining_password + ". Please share this password with your team members.",
     }, status=status.HTTP_201_CREATED)
@@ -96,8 +109,15 @@ def join_team(request, hunt_id):
         return Response(
             {"error": "Please login to join a team"},
             status=status.HTTP_400_BAD_REQUEST,)
-
+    
+    user = User.objects.get(id=request.user.id)
+    if user_already_in_a_team(user, Hunt.objects.get(id=hunt_id)):
+        return Response(
+            {"error": "You are already in a team for this hunt."},
+            status=status.HTTP_400_BAD_REQUEST,)
+        
     team_password = request.data.get('team_password')
+    
     try:
         team = Team.objects.get(
             hunt_id=hunt_id, joining_password=team_password)
@@ -105,9 +125,13 @@ def join_team(request, hunt_id):
         return Response(
             {"error": "Invalid team password. Please try again."},
             status=status.HTTP_400_BAD_REQUEST,)
-
-    user = User.objects.get(id=request.user.id)
+        
     team.members.add(user)
+    team.save()
+    hunt = Hunt.objects.get(id=hunt_id)
+    hunt.participants.add(user)
+    hunt.save()
+    
     return Response({
         "success": "You have joined the team successfully.",
     }, status=status.HTTP_201_CREATED)

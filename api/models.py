@@ -30,7 +30,8 @@ class Hunt(models.Model):
     number_of_skips_for_each_team = models.IntegerField(default=3)
     
     # Once user will create a hunt but after that, he/she can add other users as organizers
-    organizers = models.ManyToManyField(User, related_name='hunts')
+    organizers = models.ManyToManyField(User, related_name='organizing_hunts')
+    participants = models.ManyToManyField(User, related_name='participating_hunts')
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
