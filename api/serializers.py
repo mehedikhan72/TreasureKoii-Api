@@ -26,4 +26,4 @@ class HuntSerializer(serializers.ModelSerializer):
     organizers = UserDataSerializer(many=True, required=False)
     class Meta:
         model = Hunt
-        fields = ['id', 'name', 'slug', 'description', 'start_date', 'end_date', 'created_at', 'poster_img', 'organizers']
+        fields = ['id', 'name', 'slug', 'description', 'start_date', 'end_date', 'created_at', 'poster_img', 'number_of_skips_for_each_team', 'organizers']

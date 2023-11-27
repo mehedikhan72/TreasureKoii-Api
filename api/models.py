@@ -27,6 +27,7 @@ class Hunt(models.Model):
     end_date = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     poster_img = models.ImageField(upload_to='images/', blank=True)
+    number_of_skips_for_each_team = models.IntegerField(default=3)
     
     # Once user will create a hunt but after that, he/she can add other users as organizers
     organizers = models.ManyToManyField(User, related_name='hunts')
@@ -37,3 +38,39 @@ class Hunt(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Team(models.Model):
+    hunt = models.ForeignKey(Hunt, on_delete=models.CASCADE, related_name='teams')
+    name = models.CharField(max_length=100)
+    leader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teams_lead_by')
+    members = models.ManyToManyField(User, related_name='teams')
+    remaining_skips = models.IntegerField(default=3) # for a team, in a specific hunt. 
+    joining_password = models.CharField(max_length=100, blank=True, null=True)
+    
+class Puzzle(models.Model):
+    hunt = models.ForeignKey(Hunt, on_delete=models.CASCADE, related_name='puzzles')
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    answer = models.CharField(max_length=100) # need to be case insensitive
+    type = models.CharField(max_length=100, blank=True, null=True) 
+    # easy, medium, hard
+    # max points for easy, medium, hard are respectively 50, 75, 100... the points will be 
+    # calculated based on the time taken to solve the puzzle.
+    
+    # images - one to many relationship with PuzzleImage class.
+    
+class PuzzleImage(models.Model):
+    puzzle = models.ForeignKey(Puzzle, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='images/', blank=True)
+    
+class PuzzleTimeMaintenance(models.Model):
+    puzzle = models.ForeignKey(Puzzle, on_delete=models.CASCADE, related_name='time_maintenance')
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='time_maintenance')
+    puzzle_start_time = models.DateTimeField()
+    puzzle_end_time = models.DateTimeField()
+    
+    
+    
+    
+    
+    
