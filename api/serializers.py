@@ -1,4 +1,4 @@
-from .models import Hunt, User
+from .models import Hunt, User, Puzzle
 from rest_framework import serializers
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -27,3 +27,8 @@ class HuntSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hunt
         fields = ['id', 'name', 'slug', 'description', 'start_date', 'end_date', 'created_at', 'poster_img', 'number_of_skips_for_each_team', 'organizers']
+        
+class PuzzleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Puzzle
+        fields = ['id', 'hunt', 'name', 'description', 'answer', 'type', 'easy_points', 'medium_points', 'hard_points']
