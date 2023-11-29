@@ -52,9 +52,7 @@ class Puzzle(models.Model):
     answer = models.CharField(max_length=100)  # need to be case insensitive
     type = models.CharField(max_length=100, blank=True, null=True)
     # easy, medium, hard
-    easy_points = models.IntegerField(default=50)
-    medium_points = models.IntegerField(default=75)
-    hard_points = models.IntegerField(default=100)
+    points = models.IntegerField(default=0)
 
     # max points for easy, medium, hard are respectively 50, 75, 100... the points will be
     # calculated based on the time taken to solve the puzzle.
@@ -96,3 +94,24 @@ class PuzzleTimeMaintenance(models.Model):
         Team, on_delete=models.CASCADE, related_name='time_maintenance')
     puzzle_start_time = models.DateTimeField()
     puzzle_end_time = models.DateTimeField()
+    
+# for all of the teams
+class Announcement(models.Model):
+    hunt = models.ForeignKey(
+        Hunt, on_delete=models.CASCADE, related_name='announcements')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+# for each puzzle, for each team
+class Hint(models.Model):
+    puzzle = models.ForeignKey(
+        Puzzle, on_delete=models.CASCADE, related_name='hints')
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name='hints')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+class HuntImages(models.Model):
+    hunt = models.ForeignKey(
+        Hunt, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='images/', blank=True)
