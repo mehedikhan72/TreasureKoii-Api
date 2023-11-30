@@ -111,7 +111,7 @@ class Hint(models.Model):
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     
-class HuntImages(models.Model):
+class HuntImage(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='images/', blank=True)

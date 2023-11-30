@@ -1,4 +1,4 @@
-from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImages
+from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImage
 from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer
 import random
 import string
@@ -403,7 +403,7 @@ def post_hunt_images(request, hunt_slug):
         
     images = request.FILES.getlist('images')
     for image in images:
-        HuntImages.objects.create(hunt=hunt, image=image)
+        HuntImage.objects.create(hunt=hunt, image=image)
     return Response({
         "success": "Images added successfully.",
     }, status=status.HTTP_200_OK)

@@ -32,7 +32,7 @@ urlpatterns = [
     path("hunts/", HuntListCreateView.as_view()),
     path("hunt/<slug:slug>/", HuntDetailView.as_view()),
 
-    # before hunt functions
+    # before the hunt functions
     path("<slug:hunt_slug>/create_puzzle/", create_puzzle),
     path("<slug:hunt_slug>/create_team/", create_team),
     path("<slug:hunt_slug>/join_team/", join_team),
@@ -47,6 +47,8 @@ urlpatterns = [
     path("<slug:hunt_slug>/add_announcements/", add_announcements),
     path("<slug:hunt_slug>/<int:team_id>/<int:puzzle_id>/add_hint/", add_hint),
     path("<int:team_id>/<int:puzzle_id>/get_hints/", get_hints),
+    
+    # After the hunt functions
     path("<slug:hunt_slug>/get_hunt_images/", get_hunt_images),
     path("<slug:hunt_slug>/post_hunt_images/", post_hunt_images)
 
