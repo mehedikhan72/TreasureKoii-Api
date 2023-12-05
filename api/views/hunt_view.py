@@ -182,6 +182,23 @@ def get_current_puzzle_view(request, hunt_slug):
         puzzle_mainenance.save()
 
     puzzle = team.current_puzzle
+    if puzzle in team.solved_puzzles.all():
+        # team's current puzzle did not get updated after solving the previous puzzle
+
+        # TODO: Fix code repetition later
+        puzzle = get_random_puzzle(hunt, team)
+        if puzzle is None:
+            return Response(
+                {"error": "No more puzzles left to solve."},
+                status=status.HTTP_400_BAD_REQUEST,)
+        team.current_puzzle = puzzle
+        team.viewed_puzzles.add(puzzle)
+        team.save()
+        puzzle_mainenance = PuzzleTimeMaintenance.objects.create(
+            puzzle=puzzle, team=team)
+        puzzle_mainenance.puzzle_start_time = timezone.now()
+        puzzle_mainenance.save()
+
     puzzle_serializer = PuzzleSerializer(puzzle)
     return Response(puzzle_serializer.data)
 
@@ -416,6 +433,7 @@ def get_puzzle_images(request, puzzle_id):
     return Response(serializer.data)
 
 # After Hunt
+
 
 @api_view(['GET'])
 def get_hunt_images(request, hunt_slug):
