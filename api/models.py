@@ -34,7 +34,7 @@ class Hunt(models.Model):
     # Once user will create a hunt but after that, he/she can add other users as organizers
     organizers = models.ManyToManyField(User, related_name='organizing_hunts')
     participants = models.ManyToManyField(
-        User, related_name='participating_hunts')
+        User, related_name='participating_hunts', null=True, blank=True)
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
@@ -92,8 +92,8 @@ class PuzzleTimeMaintenance(models.Model):
         Puzzle, on_delete=models.CASCADE, related_name='time_maintenance')
     team = models.ForeignKey(
         Team, on_delete=models.CASCADE, related_name='time_maintenance')
-    puzzle_start_time = models.DateTimeField()
-    puzzle_end_time = models.DateTimeField()
+    puzzle_start_time = models.DateTimeField(null=True, blank=True)
+    puzzle_end_time = models.DateTimeField(null=True, blank=True)
     
 # for all of the teams
 class Announcement(models.Model):
@@ -101,6 +101,7 @@ class Announcement(models.Model):
         Hunt, on_delete=models.CASCADE, related_name='announcements')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements')
     
 # for each puzzle, for each team
 class Hint(models.Model):

@@ -1,5 +1,5 @@
 from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImage
-from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer
+from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer, PuzzleImageSerializer, HuntImageSerializer
 import random
 import string
 from django.utils import timezone
@@ -8,11 +8,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is_team_leader, get_random_puzzle, count_points, user_already_in_a_team
+from .helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is_team_leader, get_random_puzzle, count_points, user_already_in_a_team
 
 # Let's have the implementation in this order - Before Hunt, During Hunt, After Hunt
 
 # Before Hunt
+
 
 class HuntListCreateView(generics.ListCreateAPIView):
     queryset = Hunt.objects.all()
@@ -20,8 +21,9 @@ class HuntListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(organizers=User.objects.filter(
-            id=self.request.user.id))
+        serializer.save(
+            organizers=User.objects.filter(id=self.request.user.id),
+        )
 
 
 class HuntDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -74,6 +76,8 @@ def create_team(request, hunt_slug):
         return Response(
             {"error": "You are already in a team for this hunt."},
             status=status.HTTP_400_BAD_REQUEST,)
+
+    # TODO: make sure its before hunt stage
 
     hunt = Hunt.objects.get(slug=hunt_slug)
     name = request.data.get('name')
@@ -139,6 +143,7 @@ def join_team(request, hunt_slug):
 
 # puzzle view for each team
 
+
 @api_view(['GET'])
 def get_current_puzzle_view(request, hunt_slug):
     if not request.user.is_authenticated:
@@ -162,23 +167,26 @@ def get_current_puzzle_view(request, hunt_slug):
 
     # no puzzle has been assigned to this team yet(probably their first visit)
     if not team.current_puzzle:
+        print("current puzzle not found")
         puzzle = get_random_puzzle(hunt, team)
         if puzzle is None:
             return Response(
                 {"error": "No more puzzles left to solve."},
                 status=status.HTTP_400_BAD_REQUEST,)
         team.current_puzzle = puzzle
-
+        team.viewed_puzzles.add(puzzle)
+        team.save()
         puzzle_mainenance = PuzzleTimeMaintenance.objects.create(
             puzzle=puzzle, team=team)
         puzzle_mainenance.puzzle_start_time = timezone.now()
+        puzzle_mainenance.save()
 
     puzzle = team.current_puzzle
     puzzle_serializer = PuzzleSerializer(puzzle)
     return Response(puzzle_serializer.data)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 def get_next_or_skip_puzzle(request, hunt_slug, type_param):
     # type_param = 'next' or 'skip'.. based on this, implementation will vary a bit.
 
@@ -187,7 +195,7 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
         return Response(
             {"error": "Please login to skip the puzzle"},
             status=status.HTTP_400_BAD_REQUEST,)
-
+    print("slug " + hunt_slug)
     hunt = Hunt.objects.get(slug=hunt_slug)
     if not is_hunt_active(hunt):
         return Response(
@@ -221,27 +229,33 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
             {"error": "No more puzzles left to skip."},
             status=status.HTTP_400_BAD_REQUEST,)
     team.current_puzzle = puzzle
+    team.viewed_puzzles.add(puzzle)
     team.save()
 
     puzzle_mainenance = PuzzleTimeMaintenance.objects.create(
         puzzle=puzzle, team=team)
     puzzle_mainenance.puzzle_start_time = timezone.now()
+    puzzle_mainenance.save()
 
     # return the new puzzle
     puzzle_serializer = PuzzleSerializer(puzzle)
     return Response(puzzle_serializer.data)
 
+
 @api_view(['POST'])
 def submit_answer(request, puzzle_id):
+    # TODO: bug - answer gets solved even if req sent by a non-leader - always gets added to viewed.
     if not request.user.is_authenticated:
         return Response(
             {"error": "Please login to check the answer"},
             status=status.HTTP_400_BAD_REQUEST,)
 
     puzzle = Puzzle.objects.get(id=puzzle_id)
-    team = Team.objects.get(leader=request.user)
+    hunt = puzzle.hunt
 
-    if not team:
+    try:
+        team = Team.objects.get(leader=request.user, hunt=hunt)
+    except Team.DoesNotExist:
         return Response(
             {"error": "Only the leader of the team can submit the answer."},
             status=status.HTTP_400_BAD_REQUEST,)
@@ -268,6 +282,7 @@ def submit_answer(request, puzzle_id):
         puzzle_maintenance = PuzzleTimeMaintenance.objects.get(
             puzzle=puzzle, team=team)
         puzzle_maintenance.puzzle_end_time = timezone.now()
+        puzzle_maintenance.save()
 
         points = count_points(puzzle, puzzle_maintenance)
         team.points += points
@@ -284,7 +299,8 @@ def submit_answer(request, puzzle_id):
 
 
 @api_view(['GET'])
-def get_leaderboard(hunt_slug):
+def get_leaderboard(request, hunt_slug):
+    # TODO: after first production - let orgs choose whether they want the leaderboard to show at a particular time.
     hunt = Hunt.objects.get(slug=hunt_slug)
     if not hunt:
         return Response(
@@ -303,8 +319,9 @@ def get_leaderboard(hunt_slug):
     leaderboard = sorted(leaderboard, key=lambda k: k['points'], reverse=True)
     return Response(leaderboard)
 
+
 @api_view(['GET'])
-def get_announcements(hunt_slug):
+def get_announcements(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
     if not hunt:
         return Response(
@@ -314,6 +331,7 @@ def get_announcements(hunt_slug):
     announcements = hunt.announcements.all().sort_by('-created_at')
     return Response(announcements)
 
+
 @api_view(['POST'])
 def add_announcements(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
@@ -322,6 +340,11 @@ def add_announcements(request, hunt_slug):
             {"error": "Invalid hunt slug."},
             status=status.HTTP_400_BAD_REQUEST,)
 
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Please login to add an announcement"},
+            status=status.HTTP_400_BAD_REQUEST,)
+
     user = User.objects.get(id=request.user.id)
     if not user in hunt.organizers.all():
         return Response(
@@ -334,16 +357,18 @@ def add_announcements(request, hunt_slug):
             {"error": "Please provide the text."},
             status=status.HTTP_400_BAD_REQUEST,)
 
-    Announcement.objects.create(hunt=hunt, text=text)
+    Announcement.objects.create(hunt=hunt, text=text, creator=user)
     return Response({
         "success": "Announcement added successfully.",
     }, status=status.HTTP_200_OK)
-    
+
 # hints will be given during the hunt, since puzzles will come in different order for each team,
-# the hints will be separately given for each team, organizers will appoint a person to give hints 
+# the hints will be separately given for each team, organizers will appoint a person to give hints
 # and guide the team.
 
 # TODO: implement this later, not a core functionality.
+
+
 @api_view(['POST'])
 def add_hint(request, hunt_slug, team_id, puzzle_id):
     user = User.objects.get(id=request.user.id)
@@ -352,34 +377,48 @@ def add_hint(request, hunt_slug, team_id, puzzle_id):
         return Response(
             {"error": "You are not an organizer of this hunt."},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     team = Team.objects.get(id=team_id)
     puzzle = Puzzle.objects.get(id=puzzle_id)
-    
+
     text = request.data.get('text')
-    
+
     if not text:
         return Response(
             {"error": "Please provide the text."},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     Hint.objects.create(team=team, puzzle=puzzle, text=text)
     return Response({
         "success": "Hint added successfully.",
     }, status=status.HTTP_200_OK)
-    
+
+
 @api_view(['GET'])
-def get_hints(team_id, puzzle_id):
+def get_hints(request, team_id, puzzle_id):
     team = Team.objects.get(id=team_id)
     puzzle = Puzzle.objects.get(id=puzzle_id)
-    
+
     hints = Hint.objects.filter(team=team, puzzle=puzzle)
     return Response(hints)
+
+
+@api_view(['GET'])
+def get_puzzle_images(request, puzzle_id):
+    print(type(puzzle_id))
+    puzzle = Puzzle.objects.get(id=puzzle_id)
+    if not puzzle:
+        return Response(
+            {"error": "Invalid puzzle id."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    images = puzzle.images.all()
+    serializer = PuzzleImageSerializer(images, many=True)
+    return Response(serializer.data)
 
 # After Hunt
 
 @api_view(['GET'])
-def get_hunt_images(hunt_slug):
+def get_hunt_images(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
     if not hunt:
         return Response(
@@ -387,6 +426,7 @@ def get_hunt_images(hunt_slug):
             status=status.HTTP_400_BAD_REQUEST,)
     images = hunt.images.all()
     return Response(images)
+
 
 @api_view(['POST'])
 def post_hunt_images(request, hunt_slug):
@@ -400,11 +440,10 @@ def post_hunt_images(request, hunt_slug):
         return Response(
             {"error": "You are not an organizer of this hunt."},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     images = request.FILES.getlist('images')
     for image in images:
         HuntImage.objects.create(hunt=hunt, image=image)
     return Response({
         "success": "Images added successfully.",
     }, status=status.HTTP_200_OK)
-    
