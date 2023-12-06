@@ -379,7 +379,7 @@ def add_announcements(request, hunt_slug):
     Announcement.objects.create(hunt=hunt, text=text, creator=user)
     return Response({
         "success": "Announcement added successfully.",
-    }, status=status.HTTP_200_OK)
+    }, status=status.HTTP_201_CREATED)
 
 # hints will be given during the hunt, since puzzles will come in different order for each team,
 # the hints will be separately given for each team, organizers will appoint a person to give hints
@@ -445,7 +445,8 @@ def get_hunt_images(request, hunt_slug):
             {"error": "Invalid hunt slug."},
             status=status.HTTP_400_BAD_REQUEST,)
     images = hunt.images.all()
-    return Response(images)
+    serializer = HuntImageSerializer(images, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['POST'])
@@ -501,4 +502,26 @@ def add_rule(request, hunt_slug):
     Rule.objects.create(hunt=hunt, rule=rule)
     return Response({
         "success": "Rule added successfully.",
-    }, status=status.HTTP_200_OK)
+    }, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def add_organizer_to_hunt(request, hunt_slug):
+    # we get a list of emails from frontend and set them as organizers
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    user = request.user
+    organizers = hunt.organizers.all()
+    if user not in organizers:
+        return JsonResponse({"error": "You are not an organizer of this hunt"})
+    else:
+        emails = request.data.get('emails')
+        print(emails)
+        for email in emails:
+            try:
+                user = User.objects.get(email=email)
+                hunt.organizers.add(user)
+            except:
+                pass
+        hunt.save()
+        return Response({
+            "success": "Organizers added successfully.",
+        }, status=status.HTTP_201_CREATED)

@@ -22,11 +22,14 @@ from .views.hunt_view import (
     post_hunt_images,
     get_puzzle_images,
     get_rules,
-    add_rule
+    add_rule,
+    add_organizer_to_hunt,
 )
 
 from .views.frontend_helpers import (
-    hunt_exists
+    hunt_exists,
+    is_user_an_organizer,
+
 )
 
 urlpatterns = [
@@ -52,21 +55,24 @@ urlpatterns = [
     path("<int:puzzle_id>/submit-answer/", submit_answer),
     path("<slug:hunt_slug>/leaderboard/", get_leaderboard),
     path("<slug:hunt_slug>/announcements/", get_announcements),
-    path("<slug:hunt_slug>/add-announcements/", add_announcements),
     path("<slug:hunt_slug>/<int:team_id>/<int:puzzle_id>/add-hint/", add_hint),
     path("<int:team_id>/<int:puzzle_id>/get-hints/", get_hints),
-
     path("<int:puzzle_id>/get-puzzle-images/", get_puzzle_images),
 
     # After the hunt functions
     path("<slug:hunt_slug>/get-hunt-images/", get_hunt_images),
     path("<slug:hunt_slug>/post-hunt-images/", post_hunt_images),
-    
+
     # other hunt info
     path("<slug:hunt_slug>/get-rules/", get_rules),
-    path("<slug:hunt_slug>/add-rule/", add_rule),
 
     # frontend helpers
     path("<slug:hunt_slug>/hunt-exists/", hunt_exists),
+    path("<slug:hunt_slug>/is-user-an-organizer/", is_user_an_organizer),
+
+    # org dashboard
+    path("<slug:hunt_slug>/add-organizers/", add_organizer_to_hunt),
+    path("<slug:hunt_slug>/add-rule/", add_rule),
+    path("<slug:hunt_slug>/add-announcement/", add_announcements),
 
 ]
