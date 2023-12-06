@@ -24,6 +24,9 @@ from .views.hunt_view import (
     get_rules,
     add_rule,
     add_organizer_to_hunt,
+    create_puzzle_order_for_a_team,
+    get_all_teams_data,
+    get_all_puzzles_of_a_hunt
 )
 
 from .views.frontend_helpers import (
@@ -74,5 +77,9 @@ urlpatterns = [
     path("<slug:hunt_slug>/add-organizers/", add_organizer_to_hunt),
     path("<slug:hunt_slug>/add-rule/", add_rule),
     path("<slug:hunt_slug>/add-announcement/", add_announcements),
+    path("<slug:hunt_slug>/<int:team_id>/create-puzzle-order/",
+         create_puzzle_order_for_a_team),
+    path("<slug:hunt_slug>/get-all-teams-data/", get_all_teams_data),
+    path("<slug:hunt_slug>/get-all-puzzles/", get_all_puzzles_of_a_hunt)
 
 ]

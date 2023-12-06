@@ -71,6 +71,19 @@ class Team(models.Model):
     remaining_skips = models.IntegerField(default=3)
     joining_password = models.CharField(max_length=100, blank=True, null=True)
 
+    # puzzle list
+    puzzle_order_list = models.JSONField(default=list, blank=True, null=True)
+    # o indexed, applicable when puzzle_order_list is not empty.
+    current_puzzle_index = models.IntegerField(
+        default=0, blank=True, null=True)
+
+    def set_puzzle_order_list(self, puzzle_list):
+        self.puzzle_order_list = puzzle_list
+        self.save()
+
+    def get_puzzle_order_list(self):
+        return self.puzzle_order_list
+
     # during hunt settings
     current_puzzle = models.ForeignKey(
         Puzzle, on_delete=models.CASCADE, related_name='current_puzzle', blank=True, null=True)
@@ -94,16 +107,21 @@ class PuzzleTimeMaintenance(models.Model):
         Team, on_delete=models.CASCADE, related_name='time_maintenance')
     puzzle_start_time = models.DateTimeField(null=True, blank=True)
     puzzle_end_time = models.DateTimeField(null=True, blank=True)
-    
+
 # for all of the teams
+
+
 class Announcement(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='announcements')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements', null=True, blank=True)
-    
+    creator = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='announcements', null=True, blank=True)
+
 # for each puzzle, for each team
+
+
 class Hint(models.Model):
     puzzle = models.ForeignKey(
         Puzzle, on_delete=models.CASCADE, related_name='hints')
@@ -111,11 +129,13 @@ class Hint(models.Model):
         Team, on_delete=models.CASCADE, related_name='hints')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+
 class HuntImage(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='images/', blank=True)
+
 
 class Rule(models.Model):
     hunt = models.ForeignKey(

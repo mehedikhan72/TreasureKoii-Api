@@ -46,17 +46,29 @@ def count_points(puzzle, puzzle_maintenance):
     return points
 
 
-def get_random_puzzle(hunt, team):
-    viewed_puzzles = team.viewed_puzzles.all()
-    solved_puzzles = team.solved_puzzles.all()
-    available_puzzles = hunt.puzzles.exclude(
-        id__in=viewed_puzzles).exclude(id__in=solved_puzzles)
+def get_a_puzzle(hunt, team):
+    # get puzzle according to the puzzle order list
+    if team.puzzle_order_list:
+        list = team.puzzle_order_list
+        current_puzzle_index = team.current_puzzle_index
+        if current_puzzle_index >= len(list):
+            return None
+        assigning_puzzle = hunt.puzzles.get(id=list[current_puzzle_index])
+        team.current_puzzle_index += 1
+        team.save()
+        return assigning_puzzle
+    else:
+        # get random puzzle
+        viewed_puzzles = team.viewed_puzzles.all()
+        solved_puzzles = team.solved_puzzles.all()
+        available_puzzles = hunt.puzzles.exclude(
+            id__in=viewed_puzzles).exclude(id__in=solved_puzzles)
 
-    if not available_puzzles.exists():
-        return None
+        if not available_puzzles.exists():
+            return None
 
-    random_puzzle = random.choice(available_puzzles)
-    return random_puzzle
+        random_puzzle = random.choice(available_puzzles)
+        return random_puzzle
 
 
 def user_already_in_a_team(user, hunt):

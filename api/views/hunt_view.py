@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from .helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is_team_leader, get_random_puzzle, count_points, user_already_in_a_team
+from .helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is_team_leader, get_a_puzzle, count_points, user_already_in_a_team
 
 # Let's have the implementation in this order - Before Hunt, During Hunt, After Hunt
 
@@ -140,6 +140,63 @@ def join_team(request, hunt_slug):
         "success": "You have joined the team successfully.",
     }, status=status.HTTP_201_CREATED)
 
+@api_view(['GET'])
+def get_all_teams_data(request, hunt_slug):
+    # all data, and their puzzle order
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    if not hunt:
+        return Response(
+            {"error": "Invalid hunt slug."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    teams = Team.objects.filter(hunt=hunt)
+    data = []
+    for team in teams:
+        team_members = []
+        for member in team.members.all():
+            team_members.append({
+                "name": member.first_name + " " + member.last_name,
+                "email": member.email,
+            })
+        data.append({
+            "team_id": team.id,
+            "team_name": team.name,
+            "team_leader": team.leader.first_name + " " + team.leader.last_name,
+            "team_members": team_members,
+            "team_points": team.points,
+            "team_puzzle_order": team.puzzle_order_list,
+        })
+        
+    return Response(data)
+    
+
+@api_view(['POST'])
+def create_puzzle_order_for_a_team(request, hunt_slug, team_id):
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Please login to create a puzzle order"},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    user = User.objects.get(id=request.user.id)
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    team = Team.objects.get(id=team_id)
+
+    if not user in hunt.organizers.all():
+        return Response(
+            {"error": "You are not an organizer of this hunt."},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    if not team:
+        return Response(
+            {"error": "Invalid team id."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    list = request.data.get('list')
+    team.set_puzzle_order_list(list)
+    team.save()
+
+    return Response(
+        {"success": "Puzzle order created successfully."}, status=status.HTTP_201_CREATED)
+
+
 # During the Hunt
 
 # puzzle view for each team
@@ -169,7 +226,7 @@ def get_current_puzzle_view(request, hunt_slug):
     # no puzzle has been assigned to this team yet(probably their first visit)
     if not team.current_puzzle:
         print("current puzzle not found")
-        puzzle = get_random_puzzle(hunt, team)
+        puzzle = get_a_puzzle(hunt, team)
         if puzzle is None:
             return Response(
                 {"error": "No more puzzles left to solve."},
@@ -187,7 +244,7 @@ def get_current_puzzle_view(request, hunt_slug):
         # team's current puzzle did not get updated after solving the previous puzzle
 
         # TODO: Fix code repetition later
-        puzzle = get_random_puzzle(hunt, team)
+        puzzle = get_a_puzzle(hunt, team)
         if puzzle is None:
             return Response(
                 {"error": "No more puzzles left to solve."},
@@ -241,7 +298,7 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
                 status=status.HTTP_400_BAD_REQUEST,)
 
         team.remaining_skips -= 1
-    puzzle = get_random_puzzle(hunt, team)
+    puzzle = get_a_puzzle(hunt, team)
     if puzzle is None:
         return Response(
             {"error": "No more puzzles left to skip."},
@@ -481,6 +538,7 @@ def get_rules(request, hunt_slug):
     serializer = RuleSerializer(rules, many=True)
     return Response(serializer.data)
 
+
 @api_view(['POST'])
 def add_rule(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
@@ -504,6 +562,7 @@ def add_rule(request, hunt_slug):
         "success": "Rule added successfully.",
     }, status=status.HTTP_201_CREATED)
 
+
 @api_view(['POST'])
 def add_organizer_to_hunt(request, hunt_slug):
     # we get a list of emails from frontend and set them as organizers
@@ -525,3 +584,26 @@ def add_organizer_to_hunt(request, hunt_slug):
         return Response({
             "success": "Organizers added successfully.",
         }, status=status.HTTP_201_CREATED)
+        
+@api_view(['GET'])
+def get_all_puzzles_of_a_hunt(request, hunt_slug):
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Please login to get all puzzles"},
+            status=status.HTTP_400_BAD_REQUEST,)
+        
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    if not hunt:
+        return Response(
+            {"error": "Invalid hunt slug."},
+            status=status.HTTP_400_BAD_REQUEST,)
+        
+    user = User.objects.get(id=request.user.id)
+    if not user in hunt.organizers.all():
+        return Response(
+            {"error": "You are not an organizer of this hunt."},
+            status=status.HTTP_400_BAD_REQUEST,)
+        
+    puzzles = hunt.puzzles.all()
+    serializer = PuzzleSerializer(puzzles, many=True)
+    return Response(serializer.data)
