@@ -1,4 +1,4 @@
-from .models import Hunt, User, Puzzle, PuzzleImage, HuntImage
+from .models import Hunt, User, Puzzle, PuzzleImage, HuntImage, Rule, Announcement
 from rest_framework import serializers
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -44,3 +44,16 @@ class HuntImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = HuntImage
         fields = ['id', 'hunt', 'image']
+        
+class RuleSerializer(serializers.ModelSerializer):
+    hunt = HuntSerializer(many=False, required=False)
+    class Meta:
+        model = Rule
+        fields = ['id', 'hunt', 'rule']
+        
+class AnnouncementSerializer(serializers.ModelSerializer):
+    hunt = HuntSerializer(many=False, required=False)
+    creator = UserDataSerializer(many=False, required=False)
+    class Meta:
+        model = Announcement
+        fields = ['id', 'hunt', 'text', 'creator', 'created_at']

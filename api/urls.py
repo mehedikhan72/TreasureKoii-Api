@@ -20,7 +20,9 @@ from .views.hunt_view import (
     get_hints,
     get_hunt_images,
     post_hunt_images,
-    get_puzzle_images
+    get_puzzle_images,
+    get_rules,
+    add_rule
 )
 
 from .views.frontend_helpers import (
@@ -59,6 +61,10 @@ urlpatterns = [
     # After the hunt functions
     path("<slug:hunt_slug>/get-hunt-images/", get_hunt_images),
     path("<slug:hunt_slug>/post-hunt-images/", post_hunt_images),
+    
+    # other hunt info
+    path("<slug:hunt_slug>/get-rules/", get_rules),
+    path("<slug:hunt_slug>/add-rule/", add_rule),
 
     # frontend helpers
     path("<slug:hunt_slug>/hunt-exists/", hunt_exists),

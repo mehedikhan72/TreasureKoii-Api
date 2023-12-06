@@ -101,7 +101,7 @@ class Announcement(models.Model):
         Hunt, on_delete=models.CASCADE, related_name='announcements')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='announcements', null=True, blank=True)
     
 # for each puzzle, for each team
 class Hint(models.Model):
@@ -116,3 +116,8 @@ class HuntImage(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='images/', blank=True)
+
+class Rule(models.Model):
+    hunt = models.ForeignKey(
+        Hunt, on_delete=models.CASCADE, related_name='rules')
+    rule = models.TextField()

@@ -1,5 +1,6 @@
-from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImage
-from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer, PuzzleImageSerializer, HuntImageSerializer
+from django.http import JsonResponse
+from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImage, Rule
+from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer, PuzzleImageSerializer, HuntImageSerializer, RuleSerializer, AnnouncementSerializer
 import random
 import string
 from django.utils import timezone
@@ -345,8 +346,9 @@ def get_announcements(request, hunt_slug):
             {"error": "Invalid hunt slug."},
             status=status.HTTP_400_BAD_REQUEST,)
 
-    announcements = hunt.announcements.all().sort_by('-created_at')
-    return Response(announcements)
+    announcements = hunt.announcements.all().order_by('-created_at')
+    serializer = AnnouncementSerializer(announcements, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['POST'])
@@ -464,4 +466,39 @@ def post_hunt_images(request, hunt_slug):
         HuntImage.objects.create(hunt=hunt, image=image)
     return Response({
         "success": "Images added successfully.",
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_rules(request, hunt_slug):
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    if not hunt:
+        return Response(
+            {"error": "Invalid hunt slug."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    rules = Rule.objects.filter(hunt=hunt)
+    serializer = RuleSerializer(rules, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+def add_rule(request, hunt_slug):
+    hunt = Hunt.objects.get(slug=hunt_slug)
+    if not hunt:
+        return Response(
+            {"error": "Invalid hunt slug."},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Please login to add a rule"},
+            status=status.HTTP_400_BAD_REQUEST,)
+    user = User.objects.get(id=request.user.id)
+    if not user in hunt.organizers.all():
+        return Response(
+            {"error": "You are not an organizer of this hunt."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    rule = request.data.get('rule')
+    Rule.objects.create(hunt=hunt, rule=rule)
+    return Response({
+        "success": "Rule added successfully.",
     }, status=status.HTTP_200_OK)
