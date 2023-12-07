@@ -30,6 +30,8 @@ def is_user_an_organizer(request, hunt_slug):
 def get_users_hunts(request):
     # returns a list of the hunts(most possibly one) that the user is registered to and that is yet to start
     user = request.user
+    if not user:
+        return JsonResponse({"hunts": []})
     hunts = user.participating_hunts.all()
     hunts_list = []
     for hunt in hunts:
