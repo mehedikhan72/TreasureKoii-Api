@@ -32,6 +32,7 @@ from .views.hunt_view import (
 from .views.frontend_helpers import (
     hunt_exists,
     is_user_an_organizer,
+    get_users_hunts
 
 )
 
@@ -72,6 +73,7 @@ urlpatterns = [
     # frontend helpers
     path("<slug:hunt_slug>/hunt-exists/", hunt_exists),
     path("<slug:hunt_slug>/is-user-an-organizer/", is_user_an_organizer),
+    path("get-users-hunts/", get_users_hunts),
 
     # org dashboard
     path("<slug:hunt_slug>/add-organizers/", add_organizer_to_hunt),

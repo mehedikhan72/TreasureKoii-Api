@@ -3,6 +3,8 @@
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from ..models import Hunt
+from django.utils import timezone
+
 
 @api_view(['GET'])
 def hunt_exists(request, hunt_slug):
@@ -11,7 +13,8 @@ def hunt_exists(request, hunt_slug):
         return JsonResponse({"hunt_exists": True})
     else:
         return JsonResponse({"hunt_exists": False})
-    
+
+
 @api_view(['GET'])
 def is_user_an_organizer(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
@@ -21,6 +24,16 @@ def is_user_an_organizer(request, hunt_slug):
         return JsonResponse({"is_organizer": True})
     else:
         return JsonResponse({"is_organizer": False})
-    
 
-    
+
+@api_view(['GET'])
+def get_users_hunts(request):
+    # returns a list of the hunts(most possibly one) that the user is registered to and that is yet to start
+    user = request.user
+    hunts = user.participating_hunts.all()
+    hunts_list = []
+    for hunt in hunts:
+        if hunt.start_date > timezone.now():
+            hunts_list.append(hunt)
+
+    return JsonResponse({"hunts": hunts_list})
