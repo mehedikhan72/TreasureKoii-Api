@@ -4,7 +4,8 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from ..models import Hunt
 from django.utils import timezone
-
+from rest_framework.response import Response
+from ..serializers import HuntSerializer
 
 @api_view(['GET'])
 def hunt_exists(request, hunt_slug):
@@ -31,11 +32,12 @@ def get_users_hunts(request):
     # returns a list of the hunts(most possibly one) that the user is registered to and that is yet to start
     user = request.user
     if not user:
-        return JsonResponse({"hunts": []})
+        return Response({"hunts": []})
     hunts = user.participating_hunts.all()
     hunts_list = []
     for hunt in hunts:
+        serializer = HuntSerializer(hunt)
         if hunt.start_date > timezone.now():
-            hunts_list.append(hunt)
+            hunts_list.append(serializer.data)
 
-    return JsonResponse({"hunts": hunts_list})
+    return Response({"hunts": hunts_list})
