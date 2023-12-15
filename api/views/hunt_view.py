@@ -43,6 +43,9 @@ def create_puzzle(request, hunt_slug):
     answer = request.data.get('answer')
     points = request.data.get('points')
 
+    # get rid of front and trailing spaces
+    answer = answer.strip()
+
     if not hunt or not name or not description or not type or not answer:
         return Response(
             {"error": "Please provide all fields"},
@@ -140,6 +143,7 @@ def join_team(request, hunt_slug):
         "success": "You have joined the team successfully.",
     }, status=status.HTTP_201_CREATED)
 
+
 @api_view(['GET'])
 def get_all_teams_data(request, hunt_slug):
     # all data, and their puzzle order
@@ -165,9 +169,9 @@ def get_all_teams_data(request, hunt_slug):
             "team_points": team.points,
             "team_puzzle_order": team.puzzle_order_list,
         })
-        
+
     return Response(data)
-    
+
 
 @api_view(['POST'])
 def create_puzzle_order_for_a_team(request, hunt_slug, team_id):
@@ -190,6 +194,21 @@ def create_puzzle_order_for_a_team(request, hunt_slug, team_id):
             {"error": "Invalid team id."},
             status=status.HTTP_400_BAD_REQUEST,)
     list = request.data.get('list')
+    if not list:
+        return Response(
+            {"error": "Please provide the list."},
+            status=status.HTTP_400_BAD_REQUEST,)
+    for puzzle_id in list:
+        try:
+            puzzle = Puzzle.objects.get(id=puzzle_id)
+        except Puzzle.DoesNotExist:
+            return Response(
+                {"error": "Invalid puzzle id."},
+                status=status.HTTP_400_BAD_REQUEST,)
+        if puzzle.hunt != hunt:
+            return Response(
+                {"error": "Invalid puzzle id."},
+                status=status.HTTP_400_BAD_REQUEST,)
     team.set_puzzle_order_list(list)
     team.save()
 
@@ -225,7 +244,6 @@ def get_current_puzzle_view(request, hunt_slug):
 
     # no puzzle has been assigned to this team yet(probably their first visit)
     if not team.current_puzzle:
-        print("current puzzle not found")
         puzzle = get_a_puzzle(hunt, team)
         if puzzle is None:
             return Response(
@@ -268,7 +286,7 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
     # let a leader skip a puzzle, if skips are available
     if not request.user.is_authenticated:
         return Response(
-            {"error": "Please login to skip the puzzle"},
+            {"error": "Please login to get the next puzzle"},
             status=status.HTTP_400_BAD_REQUEST,)
     print("slug " + hunt_slug)
     hunt = Hunt.objects.get(slug=hunt_slug)
@@ -287,9 +305,18 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
         team = Team.objects.get(hunt=hunt, leader=user)
     except Team.DoesNotExist:
         return Response(
-            {"error": "You need to be the leader of your team to skip a puzzle."},
+            {"error": "You need to be the leader of your team to get the next puzzle."},
             status=status.HTTP_400_BAD_REQUEST,)
 
+    # case when a puzzle is solved and a member of the team hits refresh,
+    # they will get a new puzzle(current puzzle), but then when the leader
+    # hits next puzzle, they will get a new current puzzle. So, we need to
+    # take care of that.
+    if type_param == 'next':
+        if team.current_puzzle not in team.solved_puzzles.all():
+            return Response(
+                {"error": "You already have a new puzzle assigned."},
+                status=status.HTTP_400_BAD_REQUEST,)
     # handle skip
     if type_param == 'skip':
         if team.remaining_skips <= 0:
@@ -319,7 +346,6 @@ def get_next_or_skip_puzzle(request, hunt_slug, type_param):
 
 @api_view(['POST'])
 def submit_answer(request, puzzle_id):
-    # TODO: bug - answer gets solved even if req sent by a non-leader - always gets added to viewed.
     if not request.user.is_authenticated:
         return Response(
             {"error": "Please login to check the answer"},
@@ -341,6 +367,8 @@ def submit_answer(request, puzzle_id):
             status=status.HTTP_400_BAD_REQUEST,)
 
     answer = request.data.get('answer')
+    # get rid of front and trailing spaces
+    answer = answer.strip()
     if not answer:
         return Response(
             {"error": "Please provide the answer."},
@@ -520,11 +548,18 @@ def post_hunt_images(request, hunt_slug):
             status=status.HTTP_400_BAD_REQUEST,)
 
     images = request.FILES.getlist('images')
+
+    # make sure the count is not more than 10
+    existing_images_count = hunt.images.all().count()
+    if existing_images_count + len(images) > 10:
+        return Response(
+            {"error": "You cannot add more than 10 images."},
+            status=status.HTTP_400_BAD_REQUEST,)
     for image in images:
         HuntImage.objects.create(hunt=hunt, image=image)
     return Response({
         "success": "Images added successfully.",
-    }, status=status.HTTP_200_OK)
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -584,26 +619,27 @@ def add_organizer_to_hunt(request, hunt_slug):
         return Response({
             "success": "Organizers added successfully.",
         }, status=status.HTTP_201_CREATED)
-        
+
+
 @api_view(['GET'])
 def get_all_puzzles_of_a_hunt(request, hunt_slug):
     if not request.user.is_authenticated:
         return Response(
             {"error": "Please login to get all puzzles"},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     hunt = Hunt.objects.get(slug=hunt_slug)
     if not hunt:
         return Response(
             {"error": "Invalid hunt slug."},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     user = User.objects.get(id=request.user.id)
     if not user in hunt.organizers.all():
         return Response(
             {"error": "You are not an organizer of this hunt."},
             status=status.HTTP_400_BAD_REQUEST,)
-        
+
     puzzles = hunt.puzzles.all()
     serializer = PuzzleSerializer(puzzles, many=True)
     return Response(serializer.data)

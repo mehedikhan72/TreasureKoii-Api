@@ -59,6 +59,9 @@ class Puzzle(models.Model):
 
     # images - one to many relationship with PuzzleImage class.
 
+    def __str__(self):
+        return self.name
+
 
 class Team(models.Model):
     hunt = models.ForeignKey(
@@ -93,11 +96,17 @@ class Team(models.Model):
         Puzzle, related_name='solved_by_teams', blank=True)
     points = models.IntegerField(default=0)
 
+    def __str__(self):
+        return self.name
+
 
 class PuzzleImage(models.Model):
     puzzle = models.ForeignKey(
         Puzzle, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='images/', blank=True)
+
+    def __str__(self):
+        return self.puzzle.name
 
 
 class PuzzleTimeMaintenance(models.Model):
@@ -107,6 +116,9 @@ class PuzzleTimeMaintenance(models.Model):
         Team, on_delete=models.CASCADE, related_name='time_maintenance')
     puzzle_start_time = models.DateTimeField(null=True, blank=True)
     puzzle_end_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.puzzle.name
 
 # for all of the teams
 
@@ -119,6 +131,8 @@ class Announcement(models.Model):
     creator = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='announcements', null=True, blank=True)
 
+    def __str__(self):
+        return self.text
 # for each puzzle, for each team
 
 
@@ -130,14 +144,23 @@ class Hint(models.Model):
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.text
+
 
 class HuntImage(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='images/', blank=True)
 
+    def __str__(self):
+        return self.hunt.name
+
 
 class Rule(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='rules')
     rule = models.TextField()
+
+    def __str__(self):
+        return self.rule

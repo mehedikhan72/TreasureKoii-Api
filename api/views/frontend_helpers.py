@@ -30,14 +30,29 @@ def is_user_an_organizer(request, hunt_slug):
 @api_view(['GET'])
 def get_users_hunts(request):
     # returns a list of the hunts(most possibly one) that the user is registered to and that is yet to start
-    user = request.user
-    if not user:
+    if not request.user.is_authenticated:
         return Response({"hunts": []})
+    user = request.user
     hunts = user.participating_hunts.all()
     hunts_list = []
     for hunt in hunts:
         serializer = HuntSerializer(hunt)
-        if hunt.start_date > timezone.now():
+        if hunt.end_date > timezone.now():
             hunts_list.append(serializer.data)
 
+    return Response({"hunts": hunts_list})
+
+@api_view(['GET'])
+def get_users_organizing_hunts(request):
+    # returns a list of hunts that the user is organizing and that is yet to start.
+    if not request.user.is_authenticated:
+        return Response({"hunts": []})
+    user = request.user
+    hunts = user.organizing_hunts.all()
+    hunts_list = []
+    for hunt in hunts:
+        serializer = HuntSerializer(hunt)
+        if hunt.end_date > timezone.now():
+            hunts_list.append(serializer.data)
+            
     return Response({"hunts": hunts_list})
