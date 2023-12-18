@@ -42,7 +42,10 @@ class Hunt(models.Model):
 
     def __str__(self):
         return self.name
-
+    
+    # manual payment integration - until this app scales. (im lazy and busy with other stuff)
+    payment_completed = models.BooleanField(default=False)
+    payment_uuid = models.CharField(max_length=100, blank=True, null=True) # needs to be unique.
 
 class Puzzle(models.Model):
     hunt = models.ForeignKey(

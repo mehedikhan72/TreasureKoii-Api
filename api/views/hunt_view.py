@@ -15,6 +15,8 @@ from .helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is
 
 # Before Hunt
 
+import uuid
+
 
 class HuntListCreateView(generics.ListCreateAPIView):
     queryset = Hunt.objects.all()
@@ -22,8 +24,11 @@ class HuntListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
+        payment_uuid = uuid.uuid4()
         serializer.save(
             organizers=User.objects.filter(id=self.request.user.id),
+            payment_completed=False,
+            payment_uuid=payment_uuid
         )
 
 
@@ -32,6 +37,33 @@ class HuntDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = HuntSerializer
     permission_classes = [AllowAny]
     lookup_field = 'slug'
+
+# manual payment logic
+
+
+@api_view(['GET'])
+def is_hunt_paid_for(request, hunt_slug):
+    if not request.user.is_authenticated:
+        return Response({
+            "error": "Login to access to this page."
+        })
+
+    user = User.objects.get(id=request.user.id)
+    hunt = Hunt.objects.get(slug=hunt_slug)
+
+    if not user in hunt.organizers.all():
+        return Response(
+            {"error": "You are not an organizer of this hunt."},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    if hunt.payment_completed == True:
+        return Response({
+            "paid": True
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({
+            "paid": False
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -642,4 +674,12 @@ def get_all_puzzles_of_a_hunt(request, hunt_slug):
 
     puzzles = hunt.puzzles.all()
     serializer = PuzzleSerializer(puzzles, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_recent_hunts(request):
+    hunts = Hunt.objects.filter(
+        end_date__lte=timezone.now()).order_by('-end_date')[:5]
+    serializer = HuntSerializer(hunts, many=True)
     return Response(serializer.data)

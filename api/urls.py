@@ -26,7 +26,9 @@ from .views.hunt_view import (
     add_organizer_to_hunt,
     create_puzzle_order_for_a_team,
     get_all_teams_data,
-    get_all_puzzles_of_a_hunt
+    get_all_puzzles_of_a_hunt,
+    get_recent_hunts,
+    is_hunt_paid_for
 )
 
 from .views.frontend_helpers import (
@@ -76,6 +78,7 @@ urlpatterns = [
     path("<slug:hunt_slug>/is-user-an-organizer/", is_user_an_organizer),
     path("get-users-hunts/", get_users_hunts),
     path("get-users-organizing-hunts/", get_users_organizing_hunts),
+    path("get-recent-hunts/", get_recent_hunts),
 
     # org dashboard
     path("<slug:hunt_slug>/add-organizers/", add_organizer_to_hunt),
@@ -84,6 +87,8 @@ urlpatterns = [
     path("<slug:hunt_slug>/<int:team_id>/create-puzzle-order/",
          create_puzzle_order_for_a_team),
     path("<slug:hunt_slug>/get-all-teams-data/", get_all_teams_data),
-    path("<slug:hunt_slug>/get-all-puzzles/", get_all_puzzles_of_a_hunt)
+    path("<slug:hunt_slug>/get-all-puzzles/", get_all_puzzles_of_a_hunt),
+
+    path("<slug:hunt_slug>/is-hunt-paid-for/", is_hunt_paid_for),
 
 ]
