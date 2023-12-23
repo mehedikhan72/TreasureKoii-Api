@@ -43,19 +43,8 @@ class HuntDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 @api_view(['GET'])
 def is_hunt_paid_for(request, hunt_slug):
-    if not request.user.is_authenticated:
-        return Response({
-            "error": "Login to access to this page."
-        })
-
-    user = User.objects.get(id=request.user.id)
     hunt = Hunt.objects.get(slug=hunt_slug)
-
-    if not user in hunt.organizers.all():
-        return Response(
-            {"error": "You are not an organizer of this hunt."},
-            status=status.HTTP_400_BAD_REQUEST,)
-
+    
     if hunt.payment_completed == True:
         return Response({
             "paid": True
@@ -681,5 +670,6 @@ def get_all_puzzles_of_a_hunt(request, hunt_slug):
 def get_recent_hunts(request):
     hunts = Hunt.objects.filter(
         end_date__lte=timezone.now()).order_by('-end_date')[:5]
+    hunts = [hunt for hunt in hunts if hunt.payment_completed == True]
     serializer = HuntSerializer(hunts, many=True)
     return Response(serializer.data)

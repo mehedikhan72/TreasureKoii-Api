@@ -104,7 +104,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     # TODO: change to 5 minutes
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -178,6 +178,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+DATETIME_FORMAT="%Y-%m-%d%H:%M:%S"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
