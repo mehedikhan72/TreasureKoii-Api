@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from .views.hunt_view import (
-    HuntListCreateView,
+    create_hunt,
     HuntDetailView,
     create_puzzle,
     create_team,
@@ -46,9 +46,8 @@ urlpatterns = [
     path("register/", register, name="register"),
 
     # hunt
-    path("hunts/", HuntListCreateView.as_view()),
+    path("create-hunt/", create_hunt),
     path("hunt/<slug:slug>/", HuntDetailView.as_view()),
-
 
 
     # before the hunt functions

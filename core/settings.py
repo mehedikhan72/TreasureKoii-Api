@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     'api',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -104,7 +104,9 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     # TODO: change to 5 minutes
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    # "ACCESS_TOKEN_LIFETIME": timedelta(days=2),
+    # "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -178,7 +180,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-DATETIME_FORMAT="%Y-%m-%d%H:%M:%S"
+DATETIME_FORMAT = "%Y-%m-%d%H:%M:%S"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

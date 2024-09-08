@@ -1,3 +1,4 @@
+from django_resized import ResizedImageField
 from django.db import models
 from django.utils.text import slugify
 
@@ -28,8 +29,9 @@ class Hunt(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
-    poster_img = models.ImageField(upload_to='images/', blank=True)
-    number_of_skips_for_each_team = models.IntegerField(default=3)
+    poster_img = ResizedImageField(
+        force_format='WEBP', quality=50, upload_to='images/', blank=True, null=True)
+    number_of_skips_for_each_team = models.IntegerField(default=0)
 
     # Once user will create a hunt but after that, he/she can add other users as organizers
     organizers = models.ManyToManyField(User, related_name='organizing_hunts')
@@ -108,7 +110,8 @@ class Team(models.Model):
 class PuzzleImage(models.Model):
     puzzle = models.ForeignKey(
         Puzzle, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='images/', blank=True)
+    image = ResizedImageField(
+        force_format='WEBP', quality=50, upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return self.puzzle.name
@@ -156,7 +159,8 @@ class Hint(models.Model):
 class HuntImage(models.Model):
     hunt = models.ForeignKey(
         Hunt, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='images/', blank=True)
+    image = ResizedImageField(
+        force_format='WEBP', quality=50, upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return self.hunt.name

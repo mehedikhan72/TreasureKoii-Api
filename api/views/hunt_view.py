@@ -1,3 +1,4 @@
+from django.utils.text import slugify
 from django.http import JsonResponse
 from ..models import Hunt, User, Puzzle, PuzzleImage, Team, PuzzleTimeMaintenance, Announcement, Hint, HuntImage, Rule
 from ..serializers import HuntSerializer, UserDataSerializer, PuzzleSerializer, PuzzleImageSerializer, HuntImageSerializer, RuleSerializer, AnnouncementSerializer
@@ -17,19 +18,73 @@ from .helpers import is_hunt_active, is_before_hunt_start, is_after_hunt_end, is
 
 import uuid
 
+from rest_framework import serializers
 
-class HuntListCreateView(generics.ListCreateAPIView):
-    queryset = Hunt.objects.all()
-    serializer_class = HuntSerializer
-    permission_classes = [IsAuthenticated]
+from django.db import IntegrityError
 
-    def perform_create(self, serializer):
-        payment_uuid = uuid.uuid4()
-        serializer.save(
-            organizers=User.objects.filter(id=self.request.user.id),
-            payment_completed=False,
-            payment_uuid=payment_uuid
-        )
+# class HuntListCreateView(generics.ListCreateAPIView):
+#     queryset = Hunt.objects.all()
+#     serializer_class = HuntSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def perform_create(self, serializer):
+#         payment_uuid = uuid.uuid4()
+
+#         serializer.save(
+#             organizers=User.objects.filter(id=self.request.user.id),
+#             payment_completed=False,
+#             payment_uuid=payment_uuid
+#         )
+
+#         print("Hunt created successfully")
+
+
+# new functional view for creating hunts cause the above one cannot handle the case where the slug is not unique
+
+@api_view(['POST'])
+def create_hunt(request):
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Please login to create a hunt"},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    user = User.objects.get(id=request.user.id)
+    name = request.data.get('name')
+    description = request.data.get('description')
+    start_date = request.data.get('start_date')
+    end_date = request.data.get('end_date')
+    poster_img = request.FILES.get('poster_img')
+
+    # number_of_skips_for_each_team = request.data.get('number_of_skips_for_each_team')
+
+    if not name or not description or not start_date or not end_date or not poster_img:
+        return Response(
+            {"error": "Please provide all fields"},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    slug = slugify(name)
+
+    if Hunt.objects.filter(slug=slug).exists():
+        return Response(
+            {"error": "Hunt with this name already exists. Please try another one."},
+            status=status.HTTP_400_BAD_REQUEST,)
+
+    hunt = Hunt.objects.create(
+        name=name,
+        slug=slug,
+        description=description,
+        start_date=start_date,
+        end_date=end_date,
+        payment_completed=False,
+        poster_img=poster_img,
+        payment_uuid=uuid.uuid4()
+    )
+    hunt.organizers.add(user)
+    hunt.save()
+
+    return Response({
+        "success": "Hunt created successfully.",
+    }, status=status.HTTP_201_CREATED)
 
 
 class HuntDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -44,7 +99,7 @@ class HuntDetailView(generics.RetrieveUpdateDestroyAPIView):
 @api_view(['GET'])
 def is_hunt_paid_for(request, hunt_slug):
     hunt = Hunt.objects.get(slug=hunt_slug)
-    
+
     if hunt.payment_completed == True:
         return Response({
             "paid": True
