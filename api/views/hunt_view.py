@@ -244,6 +244,7 @@ def get_all_teams_data(request, hunt_slug):
             "team_members": team_members,
             "team_points": team.points,
             "team_puzzle_order": team.puzzle_order_list,
+            "team_password": team.joining_password,
         })
 
     return Response(data)
