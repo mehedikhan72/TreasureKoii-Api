@@ -24,7 +24,6 @@ def is_team_leader(user, team):
 
 
 def count_points(puzzle, puzzle_maintenance):
-    # TODO: maybe a bug here.
     start_time = puzzle_maintenance.puzzle_start_time
     end_time = puzzle_maintenance.puzzle_end_time
 
@@ -32,7 +31,7 @@ def count_points(puzzle, puzzle_maintenance):
     time_taken = end_time - start_time
 
     hunt = puzzle.hunt
-    # one problem may take the entire day(worst case)
+    # one problem may take the time of the entire hunt.
     max_allowed_time = hunt.end_date - hunt.start_date
 
     points = None
@@ -40,8 +39,10 @@ def count_points(puzzle, puzzle_maintenance):
     if time_taken < timedelta(minutes=30):
         points = max_points
     else:
-        points = max(max_points * (1 - (time_taken - timedelta(minutes=30)) /
-                     max_allowed_time), 0.5 * max_points)
+        extra_time = time_taken - timedelta(minutes=30)
+        deduction_factor = (extra_time / max_allowed_time) * 6.9
+        lower_bound = 0.25 * max_points
+        points = max(max_points * (1 - deduction_factor), lower_bound)
         points = round(points)
     return points
 

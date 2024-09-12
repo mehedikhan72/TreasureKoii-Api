@@ -684,17 +684,31 @@ def add_organizer_to_hunt(request, hunt_slug):
     if user not in organizers:
         return JsonResponse({"error": "You are not an organizer of this hunt"})
     else:
+        emails_found = 0
+        emails_not_found = 0
         emails = request.data.get('emails')
         print(emails)
         for email in emails:
             try:
                 user = User.objects.get(email=email)
                 hunt.organizers.add(user)
+                emails_found += 1
             except:
-                pass
+                emails_not_found += 1
         hunt.save()
+
+        if (emails_not_found == 0):
+            return Response({
+                "success": str(emails_found) + " organizers added successfully.",
+            }, status=status.HTTP_201_CREATED)
+
+        if (emails_found == 0):
+            return Response({
+                "error": "No organizers were added." + str(emails_not_found) + " emails were not found.",
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
-            "success": "Organizers added successfully.",
+            "success": str(emails_found) + " organizers added successfully. " + str(emails_not_found) + " emails were not found.",
         }, status=status.HTTP_201_CREATED)
 
 
