@@ -9,3 +9,8 @@
 5. Run ```python manage.py runserver``` to run the server.
 
 The server will be running in port 8000, unless there's something else already running in that port. 
+
+#### To acesss the Django admin page and the local database, run the following to create a superuser.
+```python manage.py createsuperuser```
+
+Admin page should be available at ```http://127.0.0.1:8000/admin/```
